@@ -144,16 +144,21 @@ public class MoveAnalyzer {
             boolean destinationColor =
                     sameColor(a.before, to.after);
 
-            boolean validRanks =
-                    Math.abs(a.row - b.row) == 0 &&
-                    b.row == to.row;
+            SquareChange from = a.file != to.file ? a : b;
+SquareChange victim = a.file == to.file ? a : b;
+
+boolean validRanks =
+        victim.file == to.file &&
+        victim.row == from.row &&
+        Math.abs(from.file - to.file) == 1 &&
+        Math.abs(from.row - to.row) == 1;
 
             if (pawns && oppositeColors &&
                 destinationColor && validRanks) {
 
                 return result(
                         Kind.EN_PASSANT,
-                        getSide(to.after),
+                        getSide(to.before),
                         changes
                 );
             }
