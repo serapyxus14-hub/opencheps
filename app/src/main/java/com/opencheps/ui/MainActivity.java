@@ -1,152 +1,391 @@
+
 package com.opencheps.ui;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
+
+import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.move.Move;
+import com.github.bhlangonijr.chesslib.move.MoveList;
+import com.github.bhlangonijr.chesslib.game.Game;
+import com.github.bhlangonijr.chesslib.pgn.PgnHolder;
 
 import com.opencheps.R;
-import com.opencheps.capture.ScreenCaptureService;
+import com.opencheps.engine.StockfishEngine;
+import com.opencheps.engine.StockfishEngine.Pv;
 import com.opencheps.util.Prefs;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button btnOverlay, btnStart, btnStop;
-    private TextView statusTv, thinkTv, multiPvTv;
-    private SeekBar thinkBar, multiPvBar;
-    private RadioGroup sideGroup;
-    private RadioButton sideWhite, sideBlack;
-    private MediaProjectionManager mpm;
+    private TextView statusTv;
+    private TextView gameTv;
+    private TextView positionTv;
+    private TextView fenTv;
+    private TextView analysisTv;
 
-    private final ActivityResultLauncher<Intent> projectionLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
-                if (r.getResultCode() == Activity.RESULT_OK && r.getData() != null) {
-                    String side = sideBlack.isChecked() ? "b" : "w";
-                    Prefs.setUserSide(this, side);
-                    Intent svc = new Intent(this, ScreenCaptureService.class);
-                    svc.putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, r.getResultCode());
-                    svc.putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, r.getData());
-                    svc.putExtra(ScreenCaptureService.EXTRA_USER_SIDE, side);
-                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(svc);
-                    else startService(svc);
-                    statusTv.setText(R.string.status_running);
-                    btnStop.setEnabled(true);
-                    btnStart.setEnabled(false);
-                    moveTaskToBack(true);
-                } else {
-                    toast("Screen capture not granted");
-                }
-            });
+    private Button importBtn;
+    private Button previousBtn;
+    private Button nextBtn;
+    private Button analyzeBtn;
 
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
-        setContentView(R.layout.activity_main);
-        mpm = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
 
-        btnOverlay = findViewById(R.id.btnOverlay);
-        btnStart   = findViewById(R.id.btnStart);
-        btnStop    = findViewById(R.id.btnStop);
-        statusTv   = findViewById(R.id.status);
-        thinkTv    = findViewById(R.id.thinkLabel);
-        multiPvTv  = findViewById(R.id.multiPvLabel);
-        thinkBar   = findViewById(R.id.thinkBar);
-        multiPvBar = findViewById(R.id.multiPvBar);
-        sideGroup  = findViewById(R.id.sideGroup);
-        sideWhite  = findViewById(R.id.sideWhite);
-        sideBlack  = findViewById(R.id.sideBlack);
+    private StockfishEngine engine;
+    private boolean engineReady = false;
 
-        SharedPreferences sp = Prefs.get(this);
-        int think = sp.getInt(Prefs.KEY_THINK_MS, 1500);
-        int pv    = sp.getInt(Prefs.KEY_MULTIPV, 3);
-        String side = sp.getString(Prefs.KEY_USER_SIDE, "w");
+    private final List<PositionEntry> positions = new ArrayList<>();
+    private int currentPosition = 0;
 
-        thinkBar.setMax(3000);
-        thinkBar.setProgress(think);
-        multiPvBar.setMax(2);
-        multiPvBar.setProgress(pv - 1);
-        thinkTv.setText(thinkLabelText(think));
-        multiPvTv.setText("Arrows to show: " + pv);
-        if ("b".equals(side)) sideBlack.setChecked(true); else sideWhite.setChecked(true);
+    private static class PositionEntry {
+        final String label;
+        final String fen;
 
-        thinkBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar b, int v, boolean u) {
-                int t = Math.max(300, v);
-                thinkTv.setText(thinkLabelText(t));
-                sp.edit().putInt(Prefs.KEY_THINK_MS, t).apply();
-            }
-            @Override public void onStartTrackingTouch(SeekBar b) {}
-            @Override public void onStopTrackingTouch(SeekBar b) {}
-        });
-        multiPvBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar b, int v, boolean u) {
-                int n = v + 1;
-                multiPvTv.setText("Arrows to show: " + n);
-                sp.edit().putInt(Prefs.KEY_MULTIPV, n).apply();
-            }
-            @Override public void onStartTrackingTouch(SeekBar b) {}
-            @Override public void onStopTrackingTouch(SeekBar b) {}
-        });
-        sideGroup.setOnCheckedChangeListener((g, id) -> {
-            Prefs.setUserSide(this, id == R.id.sideBlack ? "b" : "w");
-        });
-
-        btnOverlay.setOnClickListener(v -> requestOverlay());
-        btnStart.setOnClickListener(v -> {
-            if (!Settings.canDrawOverlays(this)) { toast("Grant overlay permission first"); return; }
-            projectionLauncher.launch(mpm.createScreenCaptureIntent());
-        });
-        btnStop.setOnClickListener(v -> {
-            stopService(new Intent(this, ScreenCaptureService.class));
-            statusTv.setText(R.string.status_idle);
-            btnStop.setEnabled(false);
-            btnStart.setEnabled(true);
-        });
-
-        if (Build.VERSION.SDK_INT >= 33) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{ android.Manifest.permission.POST_NOTIFICATIONS }, 1);
+        PositionEntry(String label, String fen) {
+            this.label = label;
+            this.fen = fen;
         }
     }
 
-    private String thinkLabelText(int ms) {
-        String strength;
-        if (ms < 500)       strength = "fast (≈2200 elo)";
-        else if (ms < 1000) strength = "balanced (≈2700 elo)";
-        else if (ms < 2000) strength = "strong (≈3000 elo)";
-        else                strength = "max (≈3300+ elo)";
-        return "Think time: " + ms + " ms — " + strength;
+    private final ActivityResultLauncher<String[]> pgnPicker =
+            registerForActivityResult(
+                    new ActivityResultContracts.OpenDocument(),
+                    this::onPgnSelected
+            );
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        statusTv = findViewById(R.id.status);
+        gameTv = findViewById(R.id.gameInfo);
+        positionTv = findViewById(R.id.positionInfo);
+        fenTv = findViewById(R.id.fenInfo);
+        analysisTv = findViewById(R.id.analysisInfo);
+
+        importBtn = findViewById(R.id.btnImport);
+        previousBtn = findViewById(R.id.btnPrevious);
+        nextBtn = findViewById(R.id.btnNext);
+        analyzeBtn = findViewById(R.id.btnAnalyze);
+
+        importBtn.setOnClickListener(v -> openPgnPicker());
+        previousBtn.setOnClickListener(v -> changePosition(-1));
+        nextBtn.setOnClickListener(v -> changePosition(1));
+        analyzeBtn.setOnClickListener(v -> analyzeCurrentPosition());
+
+        updatePositionDisplay();
+        startEngine();
     }
 
-    @Override protected void onResume() {
-        super.onResume();
-        boolean overlay = Settings.canDrawOverlays(this);
-        btnOverlay.setEnabled(!overlay);
-        btnOverlay.setText(overlay
-                ? getString(R.string.overlay_granted)
-                : getString(R.string.grant_overlay));
-        btnStart.setEnabled(overlay);
+    private void startEngine() {
+        statusTv.setText("Starting Stockfish...");
+
+        executor.execute(() -> {
+            try {
+                engine = new StockfishEngine();
+                engine.start(getApplicationContext());
+
+                runOnUiThread(() -> {
+                    engineReady = true;
+                    statusTv.setText("Stockfish ready · Import a completed game");
+                    updatePositionDisplay();
+                });
+
+            } catch (Exception e) {
+                android.util.Log.e("OpenCheps", "Engine startup failed", e);
+
+                runOnUiThread(() -> {
+                    statusTv.setText("Engine error: " + e.getMessage());
+                    Toast.makeText(
+                            this,
+                            "Stockfish could not start",
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
+            }
+        });
     }
 
-    private void requestOverlay() {
-        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + getPackageName()));
-        startActivity(i);
+    private void openPgnPicker() {
+        pgnPicker.launch(new String[]{
+                "application/x-chess-pgn",
+                "text/plain",
+                "application/octet-stream"
+        });
     }
 
-    private void toast(String m) { Toast.makeText(this, m, Toast.LENGTH_SHORT).show(); }
+    private void onPgnSelected(Uri uri) {
+        if (uri == null) return;
+
+        statusTv.setText("Reading PGN...");
+        importBtn.setEnabled(false);
+
+        executor.execute(() -> {
+            try {
+                String pgn = readTextFile(uri);
+                loadPgnGame(pgn);
+
+                runOnUiThread(() -> {
+                    importBtn.setEnabled(true);
+                    analysisTv.setText("Select a position and press Analyze.");
+                    statusTv.setText("Game imported successfully");
+                    updatePositionDisplay();
+                });
+
+            } catch (Exception e) {
+                android.util.Log.e("OpenCheps", "PGN import failed", e);
+
+                runOnUiThread(() -> {
+                    importBtn.setEnabled(true);
+                    statusTv.setText("Could not import game");
+                    Toast.makeText(
+                            this,
+                            "PGN error: " + e.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
+            }
+        });
+    }
+
+    private String readTextFile(Uri uri) throws Exception {
+        StringBuilder result = new StringBuilder();
+
+        try (InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null) {
+                throw new Exception("Could not open selected file");
+            }
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(input, StandardCharsets.UTF_8))) {
+
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    result.append(line).append('\n');
+                }
+            }
+        }
+
+        return result.toString();
+    }
+
+    private void loadPgnGame(String pgnText) throws Exception {
+        PgnHolder holder = new PgnHolder();
+        holder.loadPgn(pgnText);
+
+        if (holder.getGames().isEmpty()) {
+            throw new Exception("No chess game found in this PGN");
+        }
+
+        // This first version imports the first game in the file.
+        Game game = holder.getGames().get(0);
+        game.loadMoveText();
+
+        MoveList moves = game.getHalfMoves();
+        String[] sanMoves = moves.toSanArray();
+
+        if (moves.isEmpty()) {
+            throw new Exception("The PGN contains no moves");
+        }
+
+        Board board = new Board();
+        board.loadFromFen(moves.getStartFen());
+
+        List<PositionEntry> loaded = new ArrayList<>();
+        loaded.add(new PositionEntry("Starting position", board.getFen()));
+
+        for (int i = 0; i < moves.size(); i++) {
+            Move move = moves.get(i);
+
+            if (!board.doMove(move, true)) {
+                throw new Exception("Illegal move at position " + (i + 1));
+            }
+
+            int moveNumber = (i / 2) + 1;
+            String side = (i % 2 == 0) ? ". " : "... ";
+
+            String label = moveNumber + side + sanMoves[i];
+
+            loaded.add(new PositionEntry(label, board.getFen()));
+        }
+
+        synchronized (positions) {
+            positions.clear();
+            positions.addAll(loaded);
+            currentPosition = 0;
+        }
+
+        String white = game.getWhitePlayer() == null
+                ? "White" : game.getWhitePlayer().getName();
+
+        String black = game.getBlackPlayer() == null
+                ? "Black" : game.getBlackPlayer().getName();
+
+        String result = game.getResult() == null
+                ? "Unknown result" : game.getResult().toString();
+
+        String info = white + " vs " + black + "\nResult: " + result
+                + "\nMoves: " + moves.size();
+
+        runOnUiThread(() -> gameTv.setText(info));
+    }
+
+    private void changePosition(int direction) {
+        synchronized (positions) {
+            if (positions.isEmpty()) return;
+
+            currentPosition += direction;
+
+            if (currentPosition < 0) currentPosition = 0;
+
+            if (currentPosition >= positions.size()) {
+                currentPosition = positions.size() - 1;
+            }
+        }
+
+        analysisTv.setText("Select Analyze to review this position.");
+        updatePositionDisplay();
+    }
+
+    private void updatePositionDisplay() {
+        PositionEntry entry;
+
+        synchronized (positions) {
+            if (positions.isEmpty()) {
+                positionTv.setText("No game loaded");
+                fenTv.setText("");
+                previousBtn.setEnabled(false);
+                nextBtn.setEnabled(false);
+                analyzeBtn.setEnabled(false);
+                return;
+            }
+
+            entry = positions.get(currentPosition);
+
+            positionTv.setText(
+                    "Position " + currentPosition + " / "
+                            + (positions.size() - 1)
+                            + "\n" + entry.label
+            );
+
+            fenTv.setText("FEN:\n" + entry.fen);
+
+            previousBtn.setEnabled(currentPosition > 0);
+            nextBtn.setEnabled(currentPosition < positions.size() - 1);
+            analyzeBtn.setEnabled(engineReady);
+        }
+    }
+
+    private void analyzeCurrentPosition() {
+        if (!engineReady || engine == null) {
+            Toast.makeText(this, "Stockfish is not ready", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final PositionEntry entry;
+
+        synchronized (positions) {
+            if (positions.isEmpty()) return;
+            entry = positions.get(currentPosition);
+        }
+
+        analyzeBtn.setEnabled(false);
+        statusTv.setText("Analyzing completed-game position...");
+        analysisTv.setText("Stockfish is thinking...");
+
+        executor.execute(() -> {
+            try {
+                int thinkMs = Math.max(
+                        300,
+                        Prefs.thinkMs(getApplicationContext())
+                );
+
+                int multiPv = Math.max(
+                        1,
+                        Math.min(3, Prefs.multiPv(getApplicationContext()))
+                );
+
+                List<Pv> results =
+                        engine.topMoves(entry.fen, thinkMs, multiPv);
+
+                StringBuilder output = new StringBuilder();
+
+                if (results.isEmpty()) {
+                    output.append("No legal moves found.");
+                } else {
+                    output.append("STOCKFISH ANALYSIS\n\n");
+
+                    for (int i = 0; i < results.size(); i++) {
+                        Pv pv = results.get(i);
+
+                        output.append(i + 1)
+                                .append(". ")
+                                .append(pv.uci)
+                                .append("\nEvaluation: ");
+
+                        if (pv.mate) {
+                            output.append("Mate ")
+                                    .append(Math.abs(pv.cp));
+                        } else {
+                            output.append(String.format(
+                                    java.util.Locale.US,
+                                    "%+.2f",
+                                    pv.cp / 100.0
+                            ));
+                        }
+
+                        output.append("\n\n");
+                    }
+                }
+
+                String finalOutput = output.toString();
+
+                runOnUiThread(() -> {
+                    analysisTv.setText(finalOutput);
+                    statusTv.setText("Analysis complete");
+                    analyzeBtn.setEnabled(true);
+                });
+
+            } catch (Exception e) {
+                android.util.Log.e("OpenCheps", "Analysis failed", e);
+
+                runOnUiThread(() -> {
+                    analysisTv.setText("Analysis failed:\n" + e.getMessage());
+                    statusTv.setText("Analysis error");
+                    analyzeBtn.setEnabled(true);
+                });
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        executor.execute(() -> {
+            try {
+                if (engine != null) engine.stop();
+            } catch (Exception ignored) {
+            }
+        });
+
+        executor.shutdown();
+        super.onDestroy();
+    }
 }
