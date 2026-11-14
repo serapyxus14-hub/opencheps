@@ -1,4 +1,3 @@
-
 package com.opencheps.ui;
 
 import android.net.Uri;
