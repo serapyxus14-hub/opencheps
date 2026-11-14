@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -7,188 +8,166 @@
 
     <LinearLayout
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="22dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <ImageView
-                android:src="@mipmap/ic_launcher"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:contentDescription="OpenCheps"/>
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:paddingStart="14dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:text="@string/app_name"
-                    android:textColor="#FFFFFFFF"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-                <TextView
-                    android:text="@string/tagline"
-                    android:textColor="#FFA5D6A7"
-                    android:textSize="13sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-        </LinearLayout>
-
-        <View
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="16dp"
-            android:background="#3300C853"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"/>
-
         <TextView
-            android:text="Which colour are you?"
+            android:text="♟ OpenCheps"
             android:textColor="#FFFFFFFF"
-            android:textSize="14sp"
+            android:textSize="30sp"
             android:textStyle="bold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
         <TextView
-            android:text="Arrows only appear on YOUR turn. The app decides whose turn it is by what you tell it here."
-            android:textColor="#FFB0BEC5"
-            android:textSize="11sp"
-            android:paddingTop="2dp"
-            android:paddingBottom="8dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <RadioGroup
-            android:id="@+id/sideGroup"
-            android:orientation="horizontal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <RadioButton
-                android:id="@+id/sideWhite"
-                android:text="White"
-                android:textColor="#FFFFFFFF"
-                android:checked="true"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-            <RadioButton
-                android:id="@+id/sideBlack"
-                android:text="Black"
-                android:textColor="#FFFFFFFF"
-                android:paddingStart="20dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </RadioGroup>
-
-        <View
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="#3300C853"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"/>
-
-        <Button
-            android:id="@+id/btnOverlay"
-            android:text="@string/grant_overlay"
-            android:backgroundTint="#FF1B5E20"
-            android:textColor="#FFFFFFFF"
-            android:layout_marginTop="6dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <Button
-            android:id="@+id/btnStart"
-            android:text="@string/start"
-            android:backgroundTint="#FF00C853"
-            android:textColor="#FF0D1F12"
-            android:textStyle="bold"
-            android:layout_marginTop="14dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <Button
-            android:id="@+id/btnStop"
-            android:text="@string/stop"
-            android:backgroundTint="#FFD32F2F"
-            android:textColor="#FFFFFFFF"
-            android:layout_marginTop="6dp"
-            android:enabled="false"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <TextView
-            android:id="@+id/status"
-            android:text="@string/status_idle"
+            android:text="POST-GAME STOCKFISH ANALYZER"
             android:textColor="#FFA5D6A7"
-            android:paddingTop="16dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <View
-            android:layout_marginTop="20dp"
-            android:background="#3300C853"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"/>
-
-        <TextView
-            android:id="@+id/thinkLabel"
-            android:text="Think time: 1500 ms — strong (≈3000 elo)"
-            android:textColor="#FFFFFFFF"
-            android:paddingTop="20dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <TextView
-            android:text="Longer = stronger play but slower response. Stockfish 18 reaches ≈3300 elo at 2 s on 2 cores."
-            android:textColor="#FFB0BEC5"
-            android:textSize="11sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <SeekBar
-            android:id="@+id/thinkBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <TextView
-            android:id="@+id/multiPvLabel"
-            android:text="Arrows to show: 3"
-            android:textColor="#FFFFFFFF"
-            android:paddingTop="12dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <SeekBar
-            android:id="@+id/multiPvBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-        <TextView
-            android:text="@string/how_it_works"
-            android:textColor="#FFFFEB3B"
             android:textSize="12sp"
-            android:paddingTop="22dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <TextView
-            android:text="@string/how_it_works_body"
-            android:textColor="#FFB0BEC5"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
             android:paddingTop="4dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="18dp"
+            android:background="#5539C96B"/>
+
+        <TextView
+            android:id="@+id/status"
+            android:text="Starting Stockfish..."
+            android:textColor="#FFA5D6A7"
+            android:textSize="14sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnImport"
+            android:text="IMPORT COMPLETED GAME (.PGN)"
+            android:textColor="#FF0D1F12"
+            android:textStyle="bold"
+            android:backgroundTint="#FF00C853"
+            android:layout_marginTop="18dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:text="GAME"
+            android:textColor="#FFFFEB3B"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginTop="24dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/gameInfo"
+            android:text="No game imported yet."
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:paddingTop="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="18dp"
+            android:background="#5539C96B"/>
+
+        <TextView
+            android:text="POSITION REVIEW"
+            android:textColor="#FFFFEB3B"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginTop="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/positionInfo"
+            android:text="No position selected"
+            android:textColor="#FFFFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btnPrevious"
+                android:text="← Previous"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnNext"
+                android:text="Next →"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/fenInfo"
+            android:text=""
+            android:textColor="#FFB0BEC5"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="12dp"
+            android:background="#FF182B20"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnAnalyze"
+            android:text="ANALYZE THIS POSITION"
+            android:textColor="#FFFFFFFF"
+            android:textStyle="bold"
+            android:backgroundTint="#FF1B5E20"
+            android:enabled="false"
+            android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:text="STOCKFISH RESULTS"
+            android:textColor="#FFFFEB3B"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginTop="24dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/analysisInfo"
+            android:text="Import a completed game to begin."
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:padding="14dp"
+            android:background="#FF182B20"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:text="OpenCheps · Offline game review"
+            android:textColor="#FF789080"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:paddingTop="28dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
     </LinearLayout>
 </ScrollView>
